@@ -1,2 +1,2 @@
-# pycookies
+# PyCookies
 PyCookies
