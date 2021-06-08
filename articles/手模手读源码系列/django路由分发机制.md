@@ -4,47 +4,27 @@
  * @Author: GongZiyao
  * @Date: 2021-06-07 10:10:36
  * @LastEditors: GongZiyao
- * @LastEditTime: 2021-06-08 16:12:43
+ * @LastEditTime: 2021-06-08 16:59:05
 -->
 
-# django 启动和路由寻址机制
+# django 路由寻址与处理流程
 
-## 1. 启动运行命令发生了什么？
-```python
-python manage.py runserver
+本文以截取源码为主，介绍一下django处理请求的流程，中间件的细节先挖个坑~ 后续填上
 
-# manage.py
-# 入口文件中实际执行了该方法
-# 此处argv为['manage.py', 'runserver']
-execute_from_command_line(sys.argv)
+![Image text](https://raw.githubusercontent.com/zealyong/pybiscuits/main/pictures/django_request_process.png)
 
-# core.management.__init__.py
-def execute_from_command_line(argv=None):
-    utility = ManagementUtility(argv)
-    utility.execute()
+这个图是网上流传比较广的图，写的也很清楚，简单介绍一下
 
+1. 首先wsgi网关入口文件收到浏览器的请求，开始执行中间件中的process_request() 方法，执行顺序和中间件配置中的顺序保持一致（源码中直接for循环遍历）
+2. 接下来执行之后依次执行各个中间件中的 process_view()
+3. 执行实际的view方法，与model交互获取数据
+4. 执行 process_template_response() 方法
+5. 执行 process_response() 方法
 
-class ManagementUtility:
+需要注意的是：
+1.上述步骤2,3,4过程中出现执行异常会直接跳到步骤5进行返回消息中间件的处理
+2.步骤2,3,4过程中出现有返回值的情况也会直接跳到步骤5
 
- def execute(self):
-
-    # 指定py路径
-    # 加载全局变量 settings.INSTALLED_APPS
-    ''' 省略部分代码 ''' 
-
-    # 执行启动，这里只截取了部分核心代码
-    subcommand = self.argv[1]
-    if subcommand == 'runserver:
-        django.setup()  
-        # django.setup 主要功能为创建 settings.INSTALLED_APPS 中配置的app对象以供实际业务调用
-
-
-```
-
-
-## 2. 路由寻址和视图函数的执行
-
-![Image text](../pictures/django_request_process.png)
 
 下面上源码：
 ```python
@@ -53,7 +33,7 @@ class ManagementUtility:
 # 处理请求核心代码的基类
 class BaseHandler:
 
-    # 刚方法一般在网关接口文件中执行
+    # 刚方法一般在网关接口文件中执行（上图中的wsgi）
     def load_middleware(self):
         #  Must be called after the environment is fixed (see __call__ in subclasses).
         #  官方注释指明了子类当中的 __call__方法包含实际业务处理过程，比如process_request, process_response
@@ -167,7 +147,9 @@ class URLResolver:
 ```
 
 
-整个调用流程有个类处理函数描述的很清晰
+
+整个调用流程有个类处理函数描述的很清晰（这里的源码不是每次请求都会走到，只是流程写的很清晰所以复制过来展示一下）
+
 中间件与视图函数的处理顺序为：
 process_request() -> process_view() -> **view_func() -> process_template_response() -> process_response()
 若执行过程中出现系统异常或者任意一个中间件返回结果不为空，则直接调用返回
