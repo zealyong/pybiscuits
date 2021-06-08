@@ -4,12 +4,12 @@
  * @Author: GongZiyao
  * @Date: 2021-06-07 10:10:36
  * @LastEditors: GongZiyao
- * @LastEditTime: 2021-06-08 17:12:37
+ * @LastEditTime: 2021-06-08 17:20:53
 -->
 
 # django 路由寻址与处理流程
 
-本文以截取源码为主，介绍一下django处理请求的流程，中间件的细节先挖个坑~ 后续填上
+与网上大部分搜到的内容不同，本文主要以精简源码为主，介绍一下django处理请求的流程，中间件的细节先挖个坑~ 后续填上
 
 ![Image text](https://raw.githubusercontent.com/zealyong/pybiscuits/main/pictures/django_request_process.png)
 
@@ -168,16 +168,18 @@ def make_middleware_decorator(middleware_class):
             @wraps(view_func)
             def _wrapped_view(request, *args, **kwargs):
                 
-                # steo1
+                # step1
                 if hasattr(middleware, 'process_request'):
                     result = middleware.process_request(request)
                     if result is not None:
                         return result
+                # step2
                 if hasattr(middleware, 'process_view'):
                     result = middleware.process_view(request, view_func, args, kwargs)
                     if result is not None:
                         return result
                 try:
+                    # step3
                     response = view_func(request, *args, **kwargs)
                 except Exception as e:
                     if hasattr(middleware, 'process_exception'):
@@ -187,11 +189,11 @@ def make_middleware_decorator(middleware_class):
                     raise
                 if hasattr(response, 'render') and callable(response.render):
                     if hasattr(middleware, 'process_template_response'):
+                        # step4
                         response = middleware.process_template_response(request, response)
-                    # Defer running of process_response until after the template
-                    # has been rendered:
                     if hasattr(middleware, 'process_response'):
                         def callback(response):
+                            # step5
                             return middleware.process_response(request, response)
                         response.add_post_render_callback(callback)
                 else:
