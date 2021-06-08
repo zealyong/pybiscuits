@@ -4,7 +4,7 @@
  * @Author: GongZiyao
  * @Date: 2021-06-07 10:10:36
  * @LastEditors: GongZiyao
- * @LastEditTime: 2021-06-08 16:59:05
+ * @LastEditTime: 2021-06-08 17:12:37
 -->
 
 # django 路由寻址与处理流程
@@ -116,6 +116,7 @@ class BaseHandler:
         resolver_match = resolver.resolve(request.path_info)
         request.resolver_match = resolver_match
         return resolver_match
+        
 ```
 ```python
 # urls.resolvers.resolve
@@ -144,6 +145,7 @@ class URLResolver:
                     if sub_match:
                         # 该对象包含执行方法，入参，url等属性
                         return ResolverMatch(...)
+
 ```
 
 
